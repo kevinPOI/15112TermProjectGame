@@ -1,0 +1,2 @@
+def poi():
+    print("poi")
