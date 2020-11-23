@@ -40,7 +40,7 @@ class Bullet(Projectile):
         self.x + self.r, relativeY(app, self.y) + 1)
 class Enemy(object):
     def __init__(self, x, y):
-        self.hp = 100
+        self.hp = 50
         self.x = x
         self.y = y
         self.r = 40
@@ -57,11 +57,8 @@ class Enemy(object):
         while i < len(app.projectiles):
             if app.projectiles[i].x > self.x - self.r:
                 if app.projectiles[i]. x < self.x + self.r:
-                    print("2pass")
                     if app.projectiles[i].y > self.y - self.r:
-                        print("3pass")
                         if app.projectiles[i].y < self.y + self.r:
-                            print("4pass")
                             self.hp -= 10
                             app.projectiles.pop(i)
                             i -= 1
@@ -242,10 +239,10 @@ def keyReleased(app,event):
         app.ff.dy = 0
 def mousePressed(app, event):
     if event.x - app.ff.cx == 0:
-        ang = 0.5
+        ang = 0.05
     else:
         ang = math.atan((event.y - app.height / 2)/(event.x - app.ff.cx))
-    if abs(ang)<0.7:
+    if abs(ang)<0.5:
         if app.ff.charStatus != 'run':
             if event.x < app.ff.cx:
                 app.ff.charHeadingLeft = True
@@ -253,13 +250,12 @@ def mousePressed(app, event):
                 app.ff.charHeadingLeft = False
             app.ff.charStatus = 'fire'
             app.mouseAng = ang
-            print(ang)
 def mouseDragged(app, event):
     if event.x - app.ff.cx == 0:
         ang = 0.5
     else:
         ang = math.atan((event.y - app.height / 2)/(event.x - app.ff.cx))
-    if abs(ang)<0.7:
+    if abs(ang)<0.5:
         if app.ff.charStatus != 'run':
             if event.x < app.ff.cx:
                 app.ff.charHeadingLeft = True
@@ -267,7 +263,6 @@ def mouseDragged(app, event):
                 app.ff.charHeadingLeft = False
             app.ff.charStatus = 'fire'
             app.mouseAng = ang
-            print(ang)
 def mouseReleased(app, event):
     app.ff.charStatus = 'idle'
     app.ff.tickCount = 0
