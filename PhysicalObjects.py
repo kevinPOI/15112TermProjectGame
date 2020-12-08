@@ -175,6 +175,8 @@ class Chaser(object):
         self.dy += 0.0006 * self.y ** 0.15
         if self.y > app.ff.cy:
             app.gameStatus = 'over'
+            if app.ff.cy > app.bestScore:
+                app.bestScore = int(app.ff.cy)
     def drawChaser(self, app, canvas):
         canvas.create_line(0, relativeY(app, self.y), app.width, 
         relativeY(app, self.y), width = 4, fill = "red")
@@ -185,14 +187,16 @@ class Enemy(object):
         self.y = y
         self.r = 40
         self.remove = False
+        self.image = Image.open("enemy.png")
+        self.image = self.image.resize((120,90))
         
     def drawEnemy(self, app, canvas):
         if inDrawRange(self.y, app):
             canvas.create_rectangle(0, relativeY(app, self.y) + 2,
             app.width, relativeY(app, self.y) - 2, fill = 'red')
-            canvas.create_oval(self.x - self.r,
-            relativeY(app, self.y) - self.r, self.x + self.r,
-            relativeY(app, self.y) + self.r, fill = 'grey')
+            
+            im = ImageTk.PhotoImage(self.image)
+            canvas.create_image(self.x, relativeY(app, self.y), image = im)
             canvas.create_line(self.x - self.r, relativeY(app, self.y) - self.r * 1.5,
             self.x - self.r + self.hp * self.r / 20, relativeY(app, self.y) - self.r * 1.5,
             width = 2, fill = 'red')
@@ -210,13 +214,15 @@ class Enemy(object):
             i += 1
         if self.hp <= 0:
             self.remove = True
-            app.ff.ammoCount += 6
+            app.ff.ammoCount += 4
             app.ff.hp += app.ff.regen
         if not self.remove and self.y < app.ff.cy + 50 and type(self) != Bot:
             app.ff.hp -= 50
             self.remove = True
             if app.ff.hp <= 0:
                 app.gameStatus = 'over'
+                if app.ff.cy > app.bestScore:
+                    app.bestScore = int(app.ff.cy)
 class Bot(Enemy):
     def __init__(self, x, y):
         super().__init__(x,y)
@@ -234,11 +240,13 @@ class Bot(Enemy):
         self.explodePointer = 1
         self.hp = 20
         self.explosion = Image.open("explosion.png")
+        self.image = Image.open("bot.png")
+        self.image = self.image.resize((100,80))
     def drawEnemy(self, app, canvas):
+        
         if inDrawRange(self.y, app):
-            canvas.create_oval(self.x - self.r,
-                relativeY(app, self.y) - self.r, self.x + self.r,
-                relativeY(app, self.y) + self.r, fill = 'orange')
+            im = ImageTk.PhotoImage(self.image)
+            canvas.create_image(self.x, relativeY(app, self.y), image = im)
             canvas.create_line(self.x - self.r, relativeY(app, self.y) - self.r * 1.5,
                 self.x - self.r + self.hp * self.r / 20, relativeY(app, self.y) - self.r * 1.5,
                 width = 2, fill = 'red')
@@ -274,6 +282,10 @@ class Bot(Enemy):
             if self.explodePointer > 3:
                 app.ff.hp -= 25
                 self.remove = True
+                if app.ff.hp <= 0:
+                    app.gameStatus = 'over'
+                    if app.ff.cy > app.bestScore:
+                        app.bestScore = int(app.ff.cy)
             return False
         if (self.x - app.ff.cx) ** 2 + (self.y - app.ff.cy)**2 < 100 ** 2:
             self.explode = True

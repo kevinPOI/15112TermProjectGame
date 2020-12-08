@@ -133,7 +133,7 @@ def splashScreen(app):
     app.startB = Button(leftA, 360, rightA, 400, "Start")
     app.charB = Button(leftA, 440, rightA, 480, "Character")
 def characterPage(app):
-    app.returnB2 = Button(app.width - 260, 50, app.width - 60, 90, "Return to Main")
+    app.returnB2 = Button(app.width - 240, 40, app.width - 40, 80, "Return to Main")
     app.hpE = Enhancement(50, app.height - 80, "HP")
     app.regenE = Enhancement(200, app.height - 80, "HP Regen")
     app.dmgE = Enhancement(350, app.height - 80, "DMG")
@@ -141,10 +141,15 @@ def characterPage(app):
     app.grenadeE = Enhancement(650, app.height - 80, "Grenade Ct")
     app.cg = Image.open("cg.png")
     app.cg = app.cg.resize((400,560))
+    with open('save.txt', 'r') as reader:
+        data = [line.rstrip('\n') for line in reader]
+    for i in range (len(data)):
+        data[i] = int(data[i])
+    (app.hpE.lv, app.regenE.lv, app.dmgE.lv, app.ammoE.lv, app.grenadeE.lv,app.bestScore) = tuple(data)
 def gameOverPage(app):
     leftA = app.width / 2 - 120
     rightA = app.width / 2 + 120
-    app.returnB1 = Button(leftA, 360, rightA, 400, "Return to Main")
+    app.returnB1 = Button(leftA, 620, rightA, 680, "Return to Main")
 ##################################################
 def appStarted(app):
     app.gameStatus = 'start'
@@ -155,16 +160,25 @@ def appStarted(app):
     app.bots = []
     splashScreen(app)
     generateMap(app, app.width / 2, 300)
-    #createEnemies(app)
     app.projectiles = []
     app.mouseAng = 0
+    app.charData = []
+    app.chaserData = [] 
     splashScreen(app)
+    app.bestScore = 0
     characterPage(app)
+    app.gameCounter = 0
+    app.rp = app.hpE.lv +app.regenE.lv + app.dmgE.lv + app.ammoE.lv+app.grenadeE.lv
     gameOverPage(app)
     createChaser(app)
+
     for i in range (0, 10):
         app.bots.append(Bot(500, 800 + i * 600))
-    
+    app.ff.hp = 100 + 30 * app.hpE.lv
+    app.ff.regen = 0 + 3 * app.regenE.lv
+    app.ff.dmg = 10 + 3 * app.dmgE.lv
+    app.ff.ammoCount = 30 + 12 * app.ammoE.lv
+    app.ff.grenadeCount = 5 + 2 * app.grenadeE.lv
 #####################################################
 def standsOn(char, app):#if char stands on platforms
     charH, charW = char.charSize
@@ -180,18 +194,8 @@ def standsOn(char, app):#if char stands on platforms
                             char.standingOn = (platform.x, platform.y)
                             return True
     return False
-    '''
-def collide2(char, platforms):#if char stands on platforms
-    charH, charW = char.charSize
-    for platform in platforms:
-        if char.cy + charH / 2 > platform.y - platform.h * 1.5:
-            if char.cy + charH / 2 < platform.y + platform.h:
-                if char.cx + charW / 4 > platform.x - platform.r:
-                    if char.cx - charW / 4 < platform.x + platform.r:
-                        print(char.cy, platform.collisionY(char.cx, charW / 4))
-                        return True
-    return False
-    '''
+
+    
 def moveProjectiles(app):#update velocity and position of projectiles
     i = 0
     while i < len(app.projectiles): 
@@ -244,6 +248,11 @@ def timerFired(app):
         removeBots(app)
         removeEnemies(app)
         app.chaser.move(app)
+        if app.gameCounter > 10:
+            app.charData.append(app.ff.cy)
+            app.chaserData.append(app.chaser.y)
+            app.gameCounter = 0
+        app.gameCounter += 1
 def keyPressed(app, event):
     if app.gameStatus == 'run':
         if event.key == 'd':
@@ -290,33 +299,56 @@ def mousePressed(app, event):#fire and change direction accordingly
             app.gameStatus = 'char'
     if app.gameStatus == 'over':
         if app.returnB1.clicked(event.x, event.y):
+            data = (app.hpE.lv, app.regenE.lv, app.dmgE.lv, app.ammoE.lv, app.grenadeE.lv, app.bestScore)
+            data = list(data)
+            for i in range (len(data)):
+                data[i] = str(data[i])
+            with open('save.txt', 'w') as writer:
+                for e in data:
+                    writer.write(e + "\n")
             appStarted(app)
+            print(app.charData)
+        print(app.chaserData)
             
     if app.gameStatus == 'char':
         if app.returnB2.clicked(event.x, event.y):
-            app.gameStatus = 'run'
+            app.gameStatus = 'start'
 
-    if (app.hpE.minusClicked(event.x, event.y) or 
-        app.regenE.minusClicked(event.x, event.y) or
-        app.dmgE.minusClicked(event.x, event.y) or
-        app.ammoE.minusClicked(event.x, event.y) or
-        app.grenadeE.minusClicked(event.x, event.y)):
+    if (app.hpE.minusClicked(event.x, event.y, app) or 
+        app.regenE.minusClicked(event.x, event.y, app) or
+        app.dmgE.minusClicked(event.x, event.y, app) or
+        app.ammoE.minusClicked(event.x, event.y, app) or
+        app.grenadeE.minusClicked(event.x, event.y, app)):
         app.ff.hp = 100 + 30 * app.hpE.lv
-        app.ff.regen = 0 + 4 * app.regenE.lv
+        app.ff.regen = 0 + 3 * app.regenE.lv
         app.ff.dmg = 10 + 3 * app.dmgE.lv
-        app.ff.ammoCount = 30 + 8 * app.ammoE.lv
-        app.ff.grenadeCount = 5 + 1 * app.grenadeE.lv
-    if (app.hpE.plusClicked(event.x, event.y) or 
-        app.regenE.plusClicked(event.x, event.y) or
-        app.dmgE.plusClicked(event.x, event.y) or
-        app.ammoE.plusClicked(event.x, event.y) or
-        app.grenadeE.plusClicked(event.x, event.y)):
+        app.ff.ammoCount = 30 + 12 * app.ammoE.lv
+        app.ff.grenadeCount = 5 + 2 * app.grenadeE.lv
+        data = (app.hpE.lv, app.regenE.lv, app.dmgE.lv, app.ammoE.lv, app.grenadeE.lv, app. bestScore)
+        data = list(data)
+        for i in range (len(data)):
+            data[i] = str(data[i])
+        with open('save.txt', 'w') as writer:
+            for e in data:
+                writer.write(e + "\n")
+    if (app.hpE.plusClicked(event.x, event.y, app) or 
+        app.regenE.plusClicked(event.x, event.y, app) or
+        app.dmgE.plusClicked(event.x, event.y, app) or
+        app.ammoE.plusClicked(event.x, event.y, app) or
+        app.grenadeE.plusClicked(event.x, event.y, app)):
         app.ff.hp = 100 + 30 * app.hpE.lv
-        app.ff.regen = 0 + 4 * app.regenE.lv
+        app.ff.regen = 0 + 3 * app.regenE.lv
         app.ff.dmg = 10 + 3 * app.dmgE.lv
-        app.ff.ammoCount = 30 + 8 * app.ammoE.lv
-        app.ff.grenadeCount = 5 + 1 * app.grenadeE.lv
-        print (app.ff.hp, app.hpE.lv)
+        app.ff.ammoCount = 30 + 12 * app.ammoE.lv
+        app.ff.grenadeCount = 5 + 2 * app.grenadeE.lv
+        data = (app.hpE.lv, app.regenE.lv, app.dmgE.lv, app.ammoE.lv, app.grenadeE.lv, app.bestScore)
+        data = list(data)
+        for i in range (len(data)):
+            data[i] = str(data[i])
+        with open('save.txt', 'w') as writer:
+            for e in data:
+                writer.write(e + "\n")
+        
 
 
 def rightMousePressed(app, event):
@@ -377,15 +409,19 @@ def redrawAll(app, canvas):
         app.ff.drawChar(app, canvas)
         app.ff.drawStats(app, canvas)
     if gameStatus == 'over':
-        canvas.create_text(app.width / 2, app.height / 4, text = "game over",
+        canvas.create_text(app.width / 4, app.height / 4, text = "game over",
         font = 'Arial 30 bold')
-        canvas.create_text(app.width / 2, app.height / 4 + 60, text = f"score: {int(app.ff.cy)}",
+        canvas.create_text(app.width / 4, app.height / 4 + 60, text = f"score: {int(app.ff.cy)}",
         font = 'Arial 16 bold', fill = 'orange')
+        canvas.create_text(app.width / 4, app.height / 4 + 120, text = f"best score: {int(app.bestScore)}",
+        font = 'Arial 16 bold', fill = 'black')
         app.returnB1.drawButton(canvas)
+        drawChart(400,150,app,canvas)
+        
     if gameStatus == 'start':
         app.startB.drawButton(canvas)
         app.charB.drawButton(canvas)
-        canvas.create_text(app.width / 2 + 50, app.height / 5, text = "Down with Physics v0.1",
+        canvas.create_text(app.width / 2 + 50, app.height / 5, text = "Down with Physics v1.0",
         font = 'Arial 40 bold')
     if gameStatus == 'char':
         app.returnB2.drawButton(canvas)
@@ -396,8 +432,13 @@ def redrawAll(app, canvas):
         app.grenadeE.drawEnhancement(canvas)
         im_tk = ImageTk.PhotoImage(app.cg)
         canvas.create_image(200, 280, image = im_tk)
-        canvas.create_text(app.width/2, 650, text = "This feature hasn't been implemented yet, \n but meanwhile you can look at our adorable heroine"
-        , font = 'Calibri 20')
+        rpMax = min(12, int(app.bestScore / 600))
+        canvas.create_text(app.width - 150, 600, text = f"Research Points: {app.rp} / {rpMax}",font = 'Calibri 20')
+        canvas.create_text(550, 100, text = f"Hit Points: {app.ff.hp}",font = 'Calibri 20',fill = "orange")
+        canvas.create_text(550, 170, text = f"HP Regen / kill: {app.ff.regen}",font = 'Calibri 20',fill = "orange")
+        canvas.create_text(550, 240, text = f"Base Damage: {app.ff.dmg}",font = 'Calibri 20',fill = "orange")
+        canvas.create_text(550, 310, text = f"Ammo Count: {app.ff.ammoCount}",font = 'Calibri 20',fill = "orange")
+        canvas.create_text(550, 380, text = f"Grenade Count: {app.ff.grenadeCount}",font = 'Calibri 20',fill = "orange")
 def main():
     runApp(width = 960, height = 720)
 
