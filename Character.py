@@ -1,4 +1,4 @@
-from cmu_112_graphics import *
+from cmu_112_graphics_mod import *
 import math
 from PhysicalObjects import *
 
@@ -18,11 +18,15 @@ class Character(object):
         self.tickCount = 0
         self.onGround = False
         self.loadResources()
-        self.hp = 200
+        self.hp = 100
         self.isSliding = False
         self.ammoCount = 30
         self.outOfFiringArc = False
+        self.launcherOutOfFiringArc = False
         self.standingOn = (0, 0)
+        self.grenadeCount = 5
+        self.regen = 0
+        self.dmg = 10
     def loadResources(self):
         fFrame, rFrame, iFrame = 5, 13, 11
         self.charSize = (80,120)
@@ -46,12 +50,19 @@ class Character(object):
         if self.tickCount == 0 and self.ammoCount > 0:
             self.ammoCount -= 1
             if self.charHeadingLeft:
-                app.projectiles.append(Bullet(self.cx, self.cy, math.pi + ang))
+                app.projectiles.append(Bullet(self.cx, self.cy, math.pi + ang, app))
             else:
-                app.projectiles.append(Bullet(self.cx, self.cy, ang))
+                app.projectiles.append(Bullet(self.cx, self.cy, ang, app))
         self.tickCount += 1
         if self.tickCount > 6:#rof control (7 frames per shot)
             self.tickCount = 0
+    def launch(self, app, ang):
+        if self.grenadeCount > 0:
+            self.grenadeCount -= 1
+            if self.charHeadingLeft:
+                app.projectiles.append(Grenade(self.cx, self.cy, math.pi + ang, app))
+            else:
+                app.projectiles.append(Grenade(self.cx, self.cy, ang, app))
     def drawChar(self, app, canvas):
         if app.ff.charStatus == 'fire':
             if app.ff.charHeadingLeft:
@@ -92,9 +103,17 @@ class Character(object):
             text = "Out Of Ammo", font = "Arial 24 bold", fill  = "red")
         elif self.outOfFiringArc:
             canvas.create_text(app.width * 0.5, app.height * 0.75,
-            text = "Out Of Firing Arc", font = "Arial 24 bold", fill  = "red")
+            text = "Main Weapon Out Of Firing Arc", font = "Arial 24 bold", fill  = "red")
+        if self.grenadeCount <= 0:
+            canvas.create_text(app.width * 0.5, app.height * 0.82,
+            text = "Out Of Grenades", font = "Arial 24 bold", fill  = "red")
+        elif self.launcherOutOfFiringArc:
+            canvas.create_text(app.width * 0.5, app.height * 0.82,
+            text = "Grenade Launcher Out Of Firing Arc", font = "Arial 20 bold", fill  = "orange")
+        
+        
         canvas.create_text(app.width / 6, app.height * 0.95, 
-        text = f"Ammo: {self.ammoCount}", font = "Arial 14 bold")
+        text = f"Ammo: {self.ammoCount}\nGrenades: {self.grenadeCount}", font = "Arial 14 bold")
         if app.chaser.y < self.cy - app.height / 2:
             canvas.create_text(app.width * 0.5, app.height * 0.05,
             text = str(int(self.cy - app.chaser.y)) + "m", font = "Arial 20", fill  = "orange")

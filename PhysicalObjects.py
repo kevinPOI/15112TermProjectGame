@@ -1,4 +1,4 @@
-from cmu_112_graphics import *
+from cmu_112_graphics_mod import *
 import math
 
 
@@ -70,7 +70,7 @@ class Projectile(object):
         self.y = y
         self.ang = ang
         self.remove = False
-        self.hp = 3
+        
         self.reflectionAble = True
     def move(self, app):
         self.x += self.dx
@@ -118,32 +118,54 @@ class Projectile(object):
                 i += 1
         else:
             self.reflectionAble = True  
-    '''     
-    def reflectWall(self, app):
-        if self.reflectionAble:
-            i = 0
-            while i < len(app.walls):
-                wall = app.walls[i]
-                if inDrawRange(wall.y, app):
-                    if ((self.x > wall.x and self.x + self.dx < wall.x)or
-                    (self.x < wall.x and self.x + self.dx > wall.x)):
-                        if (self.y > wall.y - wall.r and self.y < wall.y1 + wall.r):
-                            self.dx *= -1
-                            self.reflectionAble = False
-                i += 1
-        else:
-            self.reflectionAble = True    
-    '''                
+    
 class Bullet(Projectile):
-    def __init__(self, x, y, ang):
+    def __init__(self, x, y, ang, app):
         super().__init__(x, y, ang)
-        self.r = 5
+        self.r = 4
         v = 50
         self.dx = v * math.cos(self.ang)
         self.dy = v * math.sin(self.ang)
+        self.hp = 3
+        self.dmg = 1 * app.ff.dmg
     def drawBullet(self, app, canvas):
         canvas.create_rectangle(self.x -self.r, relativeY(app, self.y) - 1, 
         self.x + self.r, relativeY(app, self.y) + 1)
+class Grenade(Projectile):
+    def __init__(self, x, y, ang, app):
+        super().__init__(x, y, ang)
+        self.r = 5
+        v = 30
+        self.dx = v * math.cos(self.ang)
+        self.dy = v * math.sin(self.ang)
+        self.hp = 5
+        self.explode = False
+        self.explodeCounter = 0
+        self.dmg = 2 * app.ff.dmg
+        self.explosion = Image.open("explosion.png")
+    def drawBullet(self, app, canvas):
+        canvas.create_rectangle(self.x - self.r *2, relativeY(app, self.y) - self.r, 
+        self.x + self.r * 2, relativeY(app, self.y) + self.r, fill = "gray")
+        if self.explode:
+            explosion = self.explosion.resize((self.explodeCounter*20 + 20, self.explodeCounter*20 + 20))
+            im = ImageTk.PhotoImage(explosion)
+            canvas.create_image(self.x, relativeY(app, self.y), image = im)
+    def detonate(self, app):
+        for i in range (0, 20):
+            ang = math.pi * 2 / 24 * i
+            app.projectiles.append(Shrapnel(self.x, self.y, ang, app))
+class Shrapnel(Projectile):
+    def __init__(self, x, y, ang, app):
+        super().__init__(x, y, ang)
+        self.r = 5
+        v = 30
+        self.dx = v * math.cos(self.ang)
+        self.dy = v * math.sin(self.ang)
+        self.hp = 2
+        self.dmg = 0.7 * app.ff.dmg
+    def drawBullet(self, app, canvas):
+        canvas.create_rectangle(self.x -1, relativeY(app, self.y) - 1, 
+        self.x + 1, relativeY(app, self.y) + 1)
 class Chaser(object):
     def __init__(self):
         self.y = 0
@@ -152,7 +174,7 @@ class Chaser(object):
         self.y += self.dy
         self.dy += 0.0006 * self.y ** 0.15
         if self.y > app.ff.cy:
-            app.gameOver = True
+            app.gameStatus = 'over'
     def drawChaser(self, app, canvas):
         canvas.create_line(0, relativeY(app, self.y), app.width, 
         relativeY(app, self.y), width = 4, fill = "red")
@@ -163,6 +185,7 @@ class Enemy(object):
         self.y = y
         self.r = 40
         self.remove = False
+        
     def drawEnemy(self, app, canvas):
         if inDrawRange(self.y, app):
             canvas.create_rectangle(0, relativeY(app, self.y) + 2,
@@ -181,19 +204,19 @@ class Enemy(object):
                 if app.projectiles[i]. x < self.x + self.r:
                     if app.projectiles[i].y > self.y - self.r:
                         if app.projectiles[i].y < self.y + self.r:
-                            self.hp -= 10
+                            self.hp -= app.projectiles[i].dmg
                             app.projectiles.pop(i)
-                            print(i)
                             i -= 1
             i += 1
         if self.hp <= 0:
             self.remove = True
             app.ff.ammoCount += 6
+            app.ff.hp += app.ff.regen
         if not self.remove and self.y < app.ff.cy + 50 and type(self) != Bot:
             app.ff.hp -= 50
             self.remove = True
             if app.ff.hp <= 0:
-                app.gameOver = True
+                app.gameStatus = 'over'
 class Bot(Enemy):
     def __init__(self, x, y):
         super().__init__(x,y)
@@ -208,24 +231,25 @@ class Bot(Enemy):
         self.target = (0, 0)
         self.activated = False
         self.explode = False
-        self.explodePointer = 0
+        self.explodePointer = 1
         self.hp = 20
+        self.explosion = Image.open("explosion.png")
     def drawEnemy(self, app, canvas):
-        canvas.create_oval(self.x - self.r,
-            relativeY(app, self.y) - self.r, self.x + self.r,
-            relativeY(app, self.y) + self.r, fill = 'orange')
-        canvas.create_line(self.x - self.r, relativeY(app, self.y) - self.r * 1.5,
-            self.x - self.r + self.hp * self.r / 20, relativeY(app, self.y) - self.r * 1.5,
-            width = 2, fill = 'red')
-        #canvas.create_text(self.x, self.y - self.r, text = f"{self.x},{self.y}")
-        if self.explode:
-            r = self.explodePointer * self.r
-            canvas.create_oval(self.x - r,
-            relativeY(app, self.y) - r, self.x + r,
-            relativeY(app, self.y) + r, fill = 'red')
+        if inDrawRange(self.y, app):
+            canvas.create_oval(self.x - self.r,
+                relativeY(app, self.y) - self.r, self.x + self.r,
+                relativeY(app, self.y) + self.r, fill = 'orange')
+            canvas.create_line(self.x - self.r, relativeY(app, self.y) - self.r * 1.5,
+                self.x - self.r + self.hp * self.r / 20, relativeY(app, self.y) - self.r * 1.5,
+                width = 2, fill = 'red')
+            #canvas.create_text(self.x, self.y - self.r, text = f"{self.x},{self.y}")
+            if self.explode:
+                r = self.explodePointer * self.r * 1.8
+                explosion = self.explosion.resize((int(r),int(r)))
+                im = ImageTk.PhotoImage(explosion)
+                canvas.create_image(self.x, relativeY(app, self.y), image = im)
     def onPlatform(self, app):#if char stands on platforms
         for platform in app.platforms:
-            #if inDrawRange(platform.y, app):
             r = self.r
             if self.x + r/3 > platform.x0:
                 if self.x - r/3 < platform.x1:
@@ -253,12 +277,10 @@ class Bot(Enemy):
             return False
         if (self.x - app.ff.cx) ** 2 + (self.y - app.ff.cy)**2 < 100 ** 2:
             self.explode = True
-            return False
-            
+            return False  
         self.counter += 1
         if self.counter > 5:
             self.counter = 0
-            #print(self.isJumping)
         if self.isJumping == False and self.onPlatform(app):
             self.dy = 0
             self.dx = 5 * self.direction
@@ -271,65 +293,35 @@ class Bot(Enemy):
                 self.findPath2(app, (self.x, self.y))
                 self.jump()
         self.y += self.dy
-        if self.x > 800 and self.dx > 0 or self.x < 100 and self.dx < 0:
+        if self.x > 860 and self.dx > 0 or self.x < 100 and self.dx < 0:
             self.dx *= -1
         self.x += self.dx
         if self.isJumping and self.dy > 0 and self.onPlatform(app):
-            #print("landed")
             self.isJumping = False
         
-    def findPath(self, app, steps, cord):
-        #print("findpath from", cord)
-        x, y = cord
-        nextStep = []
-        for platform in app.platforms:
-            if platform.y < y + 100 and platform.y > y - 100:
-                if platform.x > x -150 and platform.x < x + 150:
-                    if (platform.x - x) + (platform.y - y) > 20:
-                        if (platform.x - app.ff.cx) * (platform.x - x) < 0:
-                            nextStep.append((platform.x, platform.y))
-                            #print("add path", nextStep)
-                            if platform == app.ff.standingOn:
-                                steps.append((platform.x, platform.y))
-                                self.firstStep = steps[0]
-
-        for cord in nextStep:
-            t = copy.copy(steps)
-            t.append(cord)
-            self.findPath(app, t, cord)
+   
     def findPath2(self, app, cord):
-        #print("findpath from", cord)
         x, y = cord
         steps = []
-        #print("search for path from", cord)
         for platform in app.platforms:
-            '''
-            if ((platform.x < x + 400 and platform.x > app.ff.cx - 400) or 
-            (platform.x > x - 400 and platform.x < app.ff.cx + 400)):
-                if ((platform.y < y + 400 and platform.y > app.ff.cy - 400) or 
-                (platform.y > y - 400 and platform.y < app.ff.cy + 400)):
-            '''
-            if (platform.x, platform.y) != self.lastTarget:
-                dist = (platform.x - app.ff.cx) ** 2 + (platform.y - app.ff.cy) ** 2
-                (lx, ly) = self.lastTarget
-                lastDist = (lx - app.ff.cx) ** 2 + (ly - app.ff.cy) ** 2
-                if dist < lastDist:
-                    #print("appended", platform.x, platform.y)
-                    steps.append((platform.x, platform.y))
-
+            if inDrawRange(platform.y, app):
+                if (platform.x, platform.y) != self.lastTarget:
+                    dist = (platform.x - app.ff.cx) ** 2 + (platform.y - app.ff.cy) ** 2
+                    (lx, ly) = self.lastTarget
+                    lastDist = (lx - app.ff.cx) ** 2 + (ly - app.ff.cy) ** 2
+                    if dist < lastDist:
+                        steps.append((platform.x, platform.y))
         minDist = 99999999
         bestStep = (0, 0)
         for step in steps:
             x, y = step
             dx, dy = x - self.x, y - self.y
             dist = dx ** 2 + dy ** 2
-            
             if dist < minDist:
                 minDist = dist
                 bestStep = step
         self.lastTarget = bestStep
         if minDist != 99999999:
-            #print(bestStep)
             x, y = bestStep
             self.target = bestStep
             self.jx = x - self.x
