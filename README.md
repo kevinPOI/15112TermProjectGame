@@ -1,3 +1,4 @@
+unzip Characters.zip into main dir
 A D to move
 W to jump
 left click to fire
