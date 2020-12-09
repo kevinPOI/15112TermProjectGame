@@ -67,7 +67,7 @@ def removeBots(app):#remove dead enemies
         else:
             i += 1
 def generateMap(app, x, y):#procedure generation of map
-    if y > 10000:
+    if y > 13000:
         terminate = False
         for platform in app.platforms:
             if abs(x - platform.x) < 200 and abs(y - platform.y) < 70:
@@ -172,7 +172,7 @@ def appStarted(app):
     gameOverPage(app)
     createChaser(app)
 
-    for i in range (0, 10):
+    for i in range (0, 20):
         app.bots.append(Bot(500, 800 + i * 600))
     app.ff.hp = 100 + 30 * app.hpE.lv
     app.ff.regen = 0 + 3 * app.regenE.lv
