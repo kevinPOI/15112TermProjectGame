@@ -1,7 +1,6 @@
 from cmu_112_graphics_mod import *
 import math
-
-
+import pygame
 import time
 import random
 def inDrawRange(y,app):
@@ -143,6 +142,8 @@ class Grenade(Projectile):
         self.explodeCounter = 0
         self.dmg = 2 * app.ff.dmg
         self.explosion = Image.open("explosion.png")
+        pygame.mixer.init()
+        self.sound = pygame.mixer.Sound("explosionEffect.wav")
     def drawBullet(self, app, canvas):
         canvas.create_rectangle(self.x - self.r *2, relativeY(app, self.y) - self.r, 
         self.x + self.r * 2, relativeY(app, self.y) + self.r, fill = "gray")
@@ -151,6 +152,7 @@ class Grenade(Projectile):
             im = ImageTk.PhotoImage(explosion)
             canvas.create_image(self.x, relativeY(app, self.y), image = im)
     def detonate(self, app):
+        self.sound.play()
         for i in range (0, 20):
             ang = math.pi * 2 / 24 * i
             app.projectiles.append(Shrapnel(self.x, self.y, ang, app))
@@ -242,6 +244,8 @@ class Bot(Enemy):
         self.explosion = Image.open("explosion.png")
         self.image = Image.open("bot.png")
         self.image = self.image.resize((100,80))
+        pygame.mixer.init()
+        self.sound = pygame.mixer.Sound("explosionEffect.wav")
     def drawEnemy(self, app, canvas):
         
         if inDrawRange(self.y, app):
@@ -281,6 +285,7 @@ class Bot(Enemy):
             self.explodePointer += 0.5
             if self.explodePointer > 3:
                 app.ff.hp -= 25
+                self.sound.play()
                 self.remove = True
                 if app.ff.hp <= 0:
                     app.gameStatus = 'over'

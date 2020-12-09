@@ -1,9 +1,12 @@
 from cmu_112_graphics_mod import *
 import math
 from PhysicalObjects import *
-
+import sys
+from playsound import playsound
 import time
 import random
+import pygame
+
 def inDrawRange(y,app):
     if y > app.ff.cy - app.height / 2:
         if y < app.ff.cy + app.height / 2:
@@ -27,6 +30,8 @@ class Character(object):
         self.grenadeCount = 5
         self.regen = 0
         self.dmg = 10
+        pygame.mixer.init()
+        self.fireSound = pygame.mixer.Sound("fire.wav")
     def loadResources(self):
         fFrame, rFrame, iFrame = 5, 13, 11
         self.charSize = (80,120)
@@ -40,14 +45,11 @@ class Character(object):
             self.charI.append(Image.open(f"Characters/45I{i}.png"))
             self.charI[i] = self.charI[i].resize(self.charSize)     
     def move(self):
-        #if self.dx != 0 or self.dy != 0:
-            #self.charStatus = 'run'
-        #else:
-        
         self.cx += self.dx
         self.cy += self.dy
     def fire(self, app, ang):
         if self.tickCount == 0 and self.ammoCount > 0:
+            self.fireSound.play()
             self.ammoCount -= 1
             if self.charHeadingLeft:
                 app.projectiles.append(Bullet(self.cx, self.cy, math.pi + ang, app))

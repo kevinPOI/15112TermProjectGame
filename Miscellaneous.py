@@ -26,7 +26,7 @@ class Button(object):
         x0, x1 = self.x0, self.x1
         y0, y1 = self.y0, self.y1
         canvas.create_rectangle(x0,y0,x1,y1,fill = "black")
-        canvas.create_text((x1 + x0)/2, (y1 + y0)/2, text = self.text, font = "Aerial 18 bold", fill = 'yellow')
+        canvas.create_text((x1 + x0)/2, (y1 + y0)/2, text = self.text, font = "Arial 18 bold", fill = 'yellow')
 class Enhancement(object):
     def __init__(self,x0,y0,text):
         self.x0, self.y0 = x0, y0
